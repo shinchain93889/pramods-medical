@@ -22,7 +22,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="relative h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-2xl">
             <Image
-              src={shopImg?.imageUrl || ''}
+              src={shopImg?.imageUrl || 'https://picsum.photos/seed/shop/800/500'}
               alt="Pramod Medical Store Front"
               fill
               className="object-cover"

@@ -19,7 +19,7 @@ export default function Home() {
       <section className="relative h-[600px] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src={heroImg?.imageUrl || ''}
+            src={heroImg?.imageUrl || 'https://picsum.photos/seed/medical1/1200/600'}
             alt="Pramod Medical Store"
             fill
             className="object-cover brightness-50"
@@ -93,7 +93,7 @@ export default function Home() {
             return (
               <Link key={cat.id} href={`/products?category=${cat.id}`} className="group relative overflow-hidden rounded-2xl aspect-[4/3]">
                 <Image
-                  src={img?.imageUrl || ''}
+                  src={img?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300'}
                   alt={cat.name}
                   fill
                   className="object-cover transition-transform group-hover:scale-105"
