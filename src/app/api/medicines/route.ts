@@ -9,6 +9,8 @@ export interface Product {
   category: string;
   description: string;
   image: string;
+  composition?: string;
+  sideEffects?: string;
 }
 
 let cachedProducts: Product[] | null = null;
@@ -84,7 +86,9 @@ function loadData() {
             if (cols.length < 6) continue;
             
             const name = cols[0];
+            const composition = cols[1];
             const uses = cols[2];
+            const sideEffects = cols[3];
             const image = cols[4];
             
             const cat = extractCategory(uses);
@@ -99,7 +103,9 @@ function loadData() {
                 price: priceIndicator,
                 category: cat,
                 description: uses.replace(/^"|"$/g, ''),
-                image: image.replace(/^"|"$/g, '') || `https://picsum.photos/seed/${i}/400/400`
+                image: image.replace(/^"|"$/g, '') || `https://picsum.photos/seed/${i}/400/400`,
+                composition: composition.replace(/^"|"$/g, ''),
+                sideEffects: sideEffects.replace(/^"|"$/g, '')
             });
         }
         
@@ -135,7 +141,11 @@ export async function GET(request: NextRequest) {
     
     if (search) {
         const s = search.toLowerCase();
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(s));
+        filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(s) || 
+            p.description.toLowerCase().includes(s) ||
+            p.composition?.toLowerCase().includes(s)
+        );
     }
     
     if (minPrice) {

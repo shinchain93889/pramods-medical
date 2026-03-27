@@ -1,11 +1,12 @@
-
 export type Product = {
   id: string;
   name: string;
   price: number;
-  category: 'Tablets' | 'Syrups' | 'First Aid' | 'Health Supplements';
+  category: string;
   description: string;
   image: string;
+  composition?: string;
+  sideEffects?: string;
 };
 
 export const categories = [
