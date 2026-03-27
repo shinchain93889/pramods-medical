@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { categories, products } from '@/lib/mock-data';
 import { ProductCard } from '@/components/product-card';
+import { DynamicProductSection } from '@/components/dynamic-product-section';
 
 export default function Home() {
   const heroImg = PlaceHolderImages.find(p => p.id === 'hero-medical');
@@ -108,20 +109,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold font-headline text-primary">Featured Products</h2>
-            <p className="text-muted-foreground">Our most popular healthcare solutions and medicines.</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      {/* Dynamic Products Section */}
+      <DynamicProductSection />
 
       {/* Prescription CTA */}
       <section className="container mx-auto px-4">

@@ -25,11 +25,11 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50">
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <Image
-          src={imgData?.imageUrl || `https://picsum.photos/seed/${product.id}/400/400`}
+        <img
+          src={imgData?.imageUrl || product.image || `https://picsum.photos/seed/${product.id}/400/400`}
           alt={product.name}
-          fill
-          className="object-cover transition-transform group-hover:scale-110"
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           data-ai-hint={imgData?.imageHint || 'medicine box'}
         />
         <div className="absolute top-2 right-2">

@@ -1,38 +1,98 @@
-
 "use client"
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal, Sparkles } from 'lucide-react';
-import { products, categories } from '@/lib/mock-data';
+import { Search, Loader2, Sparkles } from 'lucide-react';
 import { ProductCard } from '@/components/product-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { contextualProductRecommendations, ContextualProductRecommendationsOutput } from '@/ai/flows/contextual-product-recommendations-flow';
 import { useCart } from '@/hooks/use-cart';
+import { Product } from '@/lib/mock-data';
+import { contextualProductRecommendations, ContextualProductRecommendationsOutput } from '@/ai/flows/contextual-product-recommendations-flow';
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category');
   const { cart } = useCart();
-
+  
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+
   const [recommendations, setRecommendations] = useState<ContextualProductRecommendationsOutput['recommendations']>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
-      return matchesSearch && matchesCategory;
-    });
-  }, [search, selectedCategory]);
+  useEffect(() => {
+    fetch('/api/medicines?getCategories=true')
+      .then(res => res.json())
+      .then(data => {
+        if (data.categories) setCategories(data.categories);
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProducts = async () => {
+      setLoading(true);
+      setPage(1);
+      try {
+        const query = new URLSearchParams({
+          page: '1',
+          limit: '20',
+          ...(selectedCategory && { category: selectedCategory }),
+          ...(search && { search: search })
+        });
+        const res = await fetch(`/api/medicines?${query.toString()}`);
+        const data = await res.json();
+        if (isMounted) {
+          setProducts(data.data || []);
+          setHasMore(data.meta?.page < data.meta?.totalPages);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    
+    const debounceTimer = setTimeout(fetchProducts, 400);
+    return () => clearTimeout(debounceTimer);
+  }, [selectedCategory, search]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+        const query = new URLSearchParams({
+          page: nextPage.toString(),
+          limit: '20',
+          ...(selectedCategory && { category: selectedCategory }),
+          ...(search && { search: search })
+        });
+        const res = await fetch(`/api/medicines?${query.toString()}`);
+        const data = await res.json();
+        setProducts(prev => [...prev, ...(data.data || [])]);
+        setHasMore(data.meta?.page < data.meta?.totalPages);
+        setPage(nextPage);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     async function getAiRecommendations() {
-      if (cart.length > 0) {
+      if (cart.length > 0 && products.length > 0) {
         setIsAiLoading(true);
         try {
           const res = await contextualProductRecommendations({
@@ -45,10 +105,13 @@ export default function ProductsPage() {
         } finally {
           setIsAiLoading(false);
         }
+      } else {
+        setRecommendations([]);
       }
     }
-    getAiRecommendations();
-  }, [cart]);
+    const timer = setTimeout(getAiRecommendations, 1000);
+    return () => clearTimeout(timer);
+  }, [cart, products]);
 
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col gap-12">
@@ -78,39 +141,56 @@ export default function ProductsPage() {
         </Button>
         {categories.map(cat => (
           <Button
-            key={cat.id}
-            variant={selectedCategory === cat.id ? "default" : "outline"}
-            onClick={() => setSelectedCategory(cat.id)}
+            key={cat}
+            variant={selectedCategory === cat ? "default" : "outline"}
+            onClick={() => setSelectedCategory(cat)}
             className="rounded-full"
           >
-            {cat.name}
+            {cat}
           </Button>
         ))}
       </div>
 
       {/* AI Recommendations Bar */}
-      {recommendations.length > 0 && (
+      {(recommendations.length > 0 || isAiLoading) && cart.length > 0 && (
         <div className="bg-accent/50 p-6 rounded-2xl border border-secondary/20 flex flex-col gap-4">
           <div className="flex items-center gap-2 text-secondary font-bold">
             <Sparkles className="h-5 w-5 fill-current" />
-            <span>Smart Recommendations</span>
+            <span>Smart Recommendations {isAiLoading && <Loader2 className="inline ml-2 h-4 w-4 animate-spin text-muted-foreground" />}</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {recommendations.map((rec, i) => (
-              <div key={i} className="bg-white p-4 rounded-xl shadow-sm space-y-1">
-                <h4 className="font-bold text-sm">{rec.productName}</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">{rec.reason}</p>
-              </div>
-            ))}
-          </div>
+          {recommendations.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recommendations.map((rec, i) => (
+                <div key={i} className="bg-white p-4 rounded-xl shadow-sm space-y-1">
+                  <h4 className="font-bold text-sm">{rec.productName}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{rec.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {filteredProducts.length > 0 ? (
+      {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
+          {Array.from({ length: 8 }).map((_, i) => (
+             <div key={i} className="animate-pulse bg-muted/30 border border-border/50 rounded-xl h-[380px]" />
           ))}
+        </div>
+      ) : products.length > 0 ? (
+        <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {products.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="flex justify-center mt-4">
+              <Button onClick={loadMore} disabled={loadingMore} size="lg" variant="outline" className="px-8 rounded-full border-2">
+                {loadingMore ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</> : 'Load More Products'}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-20 bg-muted/30 rounded-3xl">

@@ -89,7 +89,27 @@ const contextualProductRecommendationsFlow = ai.defineFlow(
     outputSchema: ContextualProductRecommendationsOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    try {
+      if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+        console.warn('No GEMINI_API_KEY provided. Using fallback AI recommendations.');
+        throw new Error('Missing API Key');
+      }
+      const { output } = await prompt(input);
+      return output!;
+    } catch (error) {
+      console.warn('AI Recommendation feature encountered an error. Returning fallback items.');
+      return {
+        recommendations: [
+          {
+            productName: 'General Wellness Supplement',
+            reason: 'Recommended to support overall health while AI features are unconfigured.'
+          },
+          {
+            productName: 'First Aid Essentials Kit',
+            reason: 'Always good to have on hand for minor emergencies.'
+          }
+        ]
+      };
+    }
   }
 );
