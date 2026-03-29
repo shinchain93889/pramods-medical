@@ -34,13 +34,17 @@ export function ProductCard({ product }: { product: Product }) {
         className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 cursor-pointer flex flex-col h-full"
         onClick={() => setIsDialogOpen(true)}
       >
-        <div className="relative aspect-square overflow-hidden bg-muted">
+        <div 
+          className="relative aspect-square overflow-hidden bg-muted cursor-pointer"
+          onClick={() => setIsDialogOpen(true)}
+        >
           <img
             src={imageUrl}
             alt={product.name}
             loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             data-ai-hint={imgData?.imageHint || 'medicine box'}
+            onClick={() => setIsDialogOpen(true)}
           />
           <div className="absolute top-2 right-2">
             <span className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold text-primary border border-primary/20 uppercase tracking-wider">

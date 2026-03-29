@@ -50,7 +50,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/login">
+          <Link href="/profile">
             <Button variant="ghost" size="icon">
               <User className="h-5 w-5" />
             </Button>
