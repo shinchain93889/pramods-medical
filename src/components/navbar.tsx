@@ -10,8 +10,7 @@ import { useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 
 export function Navbar() {
-  const { cart } = useCart();
-  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const { cart, itemCount } = useCart();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

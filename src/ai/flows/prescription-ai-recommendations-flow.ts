@@ -81,31 +81,40 @@ const prescriptionAiRecommendationsFlow = ai.defineFlow(
     outputSchema: PrescriptionAiRecommendationsOutputSchema,
   },
   async input => {
-    const {output} = await identifyMedicinesPrompt(input);
+    try {
+      if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+        throw new Error('Missing API Key');
+      }
+      
+      const {output} = await identifyMedicinesPrompt(input);
 
-    if (!output || !output.identifiedMedicines) {
+      if (!output || !output.identifiedMedicines) {
+        return {suggestedProducts: []};
+      }
+
+      const identifiedMedicinesLower = output.identifiedMedicines.map(name =>
+        name.toLowerCase()
+      );
+      const suggestedProducts: typeof PrescriptionAiRecommendationsOutputSchema._type['suggestedProducts'] = [];
+
+      // Simple matching logic: find store products whose names (case-insensitive) include any identified medicine name.
+      // A more sophisticated matching could involve fuzzy matching or a dedicated search service.
+      for (const medicineName of identifiedMedicinesLower) {
+        const matchingProducts = input.storeInventory.filter(product =>
+          product.name.toLowerCase().includes(medicineName)
+        );
+        suggestedProducts.push(...matchingProducts);
+      }
+
+      // Remove duplicates based on product id
+      const uniqueSuggestedProducts = Array.from(
+        new Map(suggestedProducts.map(product => [product.id, product])).values()
+      );
+
+      return {suggestedProducts: uniqueSuggestedProducts};
+    } catch (error) {
+      console.warn('Prescription AI Identification encountered an error. Returning empty suggestions.', error);
       return {suggestedProducts: []};
     }
-
-    const identifiedMedicinesLower = output.identifiedMedicines.map(name =>
-      name.toLowerCase()
-    );
-    const suggestedProducts: typeof PrescriptionAiRecommendationsOutputSchema._type['suggestedProducts'] = [];
-
-    // Simple matching logic: find store products whose names (case-insensitive) include any identified medicine name.
-    // A more sophisticated matching could involve fuzzy matching or a dedicated search service.
-    for (const medicineName of identifiedMedicinesLower) {
-      const matchingProducts = input.storeInventory.filter(product =>
-        product.name.toLowerCase().includes(medicineName)
-      );
-      suggestedProducts.push(...matchingProducts);
-    }
-
-    // Remove duplicates based on product id
-    const uniqueSuggestedProducts = Array.from(
-      new Map(suggestedProducts.map(product => [product.id, product])).values()
-    );
-
-    return {suggestedProducts: uniqueSuggestedProducts};
   }
 );

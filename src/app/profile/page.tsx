@@ -41,7 +41,7 @@ export default function ProfilePage() {
           .from('profiles')
           .select('*')
           .eq('email', userEmail)
-          .single();
+          .maybeSingle(); // Use maybeSingle to avoid error if profile doesn't exist yet
           
         if (profile) {
           setName(profile.name || '');
@@ -105,8 +105,14 @@ export default function ProfilePage() {
               Manage your personal details and contact information.
             </p>
           </div>
-          <Button variant="outline" size="icon" onClick={handleLogout} className="absolute right-0 top-6" title="Logout">
-            <LogOut className="h-5 w-5" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout} 
+            className="absolute right-0 top-6 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
           </Button>
         </div>
 
@@ -219,6 +225,16 @@ export default function ProfilePage() {
               </button>
             </div>
             
+            <div className="pt-4 border-t border-gray-100 mt-6">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-center text-sm font-medium text-gray-500 hover:text-red-600 transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out of my account
+              </button>
+            </div>
           </form>
         </div>
       </div>

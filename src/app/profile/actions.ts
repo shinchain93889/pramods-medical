@@ -17,35 +17,48 @@ export async function saveProfile(formData: FormData) {
   }
 
   try {
-    // Check if profile already exists for this email
-    const { data: existingProfile } = await supabase
+    // Check if profile already exists using maybeSingle to avoid PGRST116 error if not found
+    const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing profile:', checkError);
+      return { success: false, message: checkError.message };
+    }
 
     let result;
-
     if (existingProfile) {
-      // Update existing profile
+      // Update existing record
       result = await supabase
         .from('profiles')
         .update({ name, mobile_no, address })
         .eq('email', email)
         .select()
-        .single();
+        .maybeSingle();
     } else {
-      // Insert new profile
+      // Insert new record
       result = await supabase
         .from('profiles')
         .insert([{ name, email, mobile_no, address }])
         .select()
-        .single();
+        .maybeSingle();
     }
 
     if (result.error) {
       console.error('Error saving profile:', result.error);
       return { success: false, message: result.error.message };
+    }
+
+    if (!result.data) {
+      // This might happen due to RLS policies
+      return { 
+        success: true, 
+        message: 'Profile saved (but row cannot be returned due to security filters).',
+        data: null 
+      };
     }
 
     return { success: true, message: 'Profile saved successfully!', data: result.data };

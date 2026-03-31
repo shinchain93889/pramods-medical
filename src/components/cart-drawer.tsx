@@ -4,12 +4,12 @@
 import { useCart } from '@/hooks/use-cart';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Trash2, ShoppingBag } from 'lucide-react';
+import { Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export function CartDrawer({ children }: { children: React.ReactNode }) {
-  const { cart, removeFromCart, total, clearCart } = useCart();
+  const { cart, removeFromCart, decrementQuantity, addToCart, total, clearCart } = useCart();
 
   return (
     <Sheet>
@@ -35,28 +35,49 @@ export function CartDrawer({ children }: { children: React.ReactNode }) {
               {cart.map((item) => {
                 const imgData = PlaceHolderImages.find(p => p.id === item.image);
                 return (
-                  <div key={item.id} className="flex gap-4 items-start">
-                    <div className="relative h-20 w-20 overflow-hidden rounded-md border">
+                  <div key={item.id} className="flex gap-4 items-start pb-4 border-b border-border/40 last:border-0">
+                    <div className="relative h-20 w-20 overflow-hidden rounded-md border bg-muted">
                       <Image
-                        src={imgData?.imageUrl || '/placeholder.png'}
+                        src={imgData?.imageUrl || item.image || '/placeholder.png'}
                         alt={item.name}
                         fill
                         className="object-cover"
                       />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground mb-1">{item.category}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm">₹{item.price.toFixed(2)} x {item.quantity}</span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-medium text-sm line-clamp-1">{item.name}</h4>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive transition-colors"
                           onClick={() => removeFromCart(item.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{item.category}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center border rounded-md">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-none border-r"
+                            onClick={() => decrementQuantity(item.id)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-10 text-center text-xs font-medium">{item.quantity}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-none border-l"
+                            onClick={() => addToCart(item)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <span className="font-bold text-sm text-primary">₹{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

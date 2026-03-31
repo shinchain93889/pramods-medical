@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Authentic medicines, first aid, and health supplements with prescription upload feature.',
 };
 
+import { CartProvider } from '@/hooks/use-cart';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,12 +25,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen bg-background">
-        <Navbar />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
+        <CartProvider>
+          <Navbar />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+          <Toaster />
+        </CartProvider>
       </body>
     </html>
   );
