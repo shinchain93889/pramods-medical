@@ -36,9 +36,9 @@ export default function LoginPage() {
           email,
           password,
         });
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "Account created!",
           description: "Please check your email to verify your account or login directly if email confirmation is disabled.",
@@ -59,9 +59,12 @@ export default function LoginPage() {
         router.push('/'); // Redirect to home or dashboard
       }
     } catch (error: any) {
+      console.error("Authentication error details:", error);
       toast({
         title: isSignUp ? "Sign Up Error" : "Login Error",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message === 'Failed to fetch' 
+          ? "Network error: Unable to connect to Supabase. Please check your internet connection or if the database is accessible."
+          : error.message || "An unexpected error occurred.",
         variant: "destructive"
       });
     } finally {
@@ -91,12 +94,12 @@ export default function LoginPage() {
               <Label htmlFor="login-email">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="login-email" 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  className="pl-10" 
-                  required 
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  className="pl-10"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -111,12 +114,12 @@ export default function LoginPage() {
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="login-password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="pl-10" 
-                  required 
+                <Input
+                  id="login-password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="pl-10"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -141,9 +144,9 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           {isSignUp ? "Already have an account? " : "Don't have an account? "}
-          <button 
+          <button
             type="button"
-            onClick={() => setIsSignUp(!isSignUp)} 
+            onClick={() => setIsSignUp(!isSignUp)}
             className="text-primary font-bold hover:underline"
           >
             {isSignUp ? "Sign in instead" : "Sign up now"}

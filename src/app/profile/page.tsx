@@ -12,29 +12,29 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  
+
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [mobileNo, setMobileNo] = useState('');
   const [address, setAddress] = useState('');
-  
+
   const router = useRouter();
 
   useEffect(() => {
     async function loadSessionAndProfile() {
       if (!supabase) return;
-      
+
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         // Redirect to login if not authenticated
         router.push('/login');
         return;
       }
-      
+
       const userEmail = session.user.email || '';
       setEmail(userEmail);
-      
+
       try {
         // Fetch existing profile if any
         const { data: profile } = await supabase
@@ -42,7 +42,7 @@ export default function ProfilePage() {
           .select('*')
           .eq('email', userEmail)
           .maybeSingle(); // Use maybeSingle to avoid error if profile doesn't exist yet
-          
+
         if (profile) {
           setName(profile.name || '');
           setMobileNo(profile.mobile_no || '');
@@ -54,7 +54,7 @@ export default function ProfilePage() {
         setInitialLoading(false);
       }
     }
-    
+
     loadSessionAndProfile();
   }, [router]);
 
@@ -65,7 +65,7 @@ export default function ProfilePage() {
 
     const formData = new FormData(event.currentTarget);
     formData.append('email', email); // ensure email is submitted
-    
+
     const result = await saveProfile(formData);
 
     if (result.success) {
@@ -75,10 +75,10 @@ export default function ProfilePage() {
       setMessage({ type: 'error', text: result.message });
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
-    
+
     setLoading(false);
   }
-  
+
   async function handleLogout() {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -105,10 +105,10 @@ export default function ProfilePage() {
               Manage your personal details and contact information.
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleLogout} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
             className="absolute right-0 top-6 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
           >
             <LogOut className="h-4 w-4 mr-2" />
@@ -118,7 +118,7 @@ export default function ProfilePage() {
 
         <div className="bg-white py-10 px-8 rounded-2xl shadow-sm border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            
+
             {message && (
               <div className={`p-4 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                 {message.text}
@@ -224,7 +224,7 @@ export default function ProfilePage() {
                 )}
               </button>
             </div>
-            
+
             <div className="pt-4 border-t border-gray-100 mt-6">
               <button
                 type="button"

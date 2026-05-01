@@ -1,16 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle2, Loader2, Sparkles, X, MapPin, MessageSquare, Camera, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, Loader2, Sparkles, X, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { products } from '@/lib/mock-data';
-import { prescribeAiRecommendations, PrescriptionAiRecommendationsOutput } from '@/ai/flows/prescription-ai-recommendations-flow';
-import { ProductCard } from '@/components/product-card';
 import { toast } from '@/hooks/use-toast';
 import { savePrescriptionOrder } from './actions';
 import Image from 'next/image';
@@ -23,8 +19,7 @@ export default function PrescriptionPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [suggestedProducts, setSuggestedProducts] = useState<PrescriptionAiRecommendationsOutput['suggestedProducts']>([]);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', notes: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '' });
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
@@ -34,7 +29,7 @@ export default function PrescriptionPage() {
     }
 
     if (file.type === 'application/pdf') {
-      setPreview('/pdf-placeholder.png'); // You can use a generic PDF icon
+      setPreview('pdf'); // Set a special string for PDF
       return;
     }
 
@@ -43,6 +38,7 @@ export default function PrescriptionPage() {
 
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -65,13 +61,12 @@ export default function PrescriptionPage() {
     e.stopPropagation();
     setFile(null);
     setPreview(null);
-    setSuggestedProducts([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      toast({ title: "Upload Required", description: "Please upload your prescription before placing an order.", variant: "destructive" });
+      toast({ title: "Upload Required", description: "Please upload your prescription.", variant: "destructive" });
       return;
     }
 
@@ -82,42 +77,20 @@ export default function PrescriptionPage() {
       const data = new FormData();
       data.append('name', formData.name);
       data.append('phone', formData.phone);
-      data.append('address', formData.address);
-      data.append('extra_notes', formData.notes);
       data.append('prescription', file);
 
       setUploadProgress(40);
 
-      // 1. Save to Database and Storage
       const result = await savePrescriptionOrder(data);
       
       if (!result.success) {
         throw new Error(result.message);
       }
 
-      setUploadProgress(70);
-
-      // 2. Perform AI Analysis (Optional bonus from before)
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const dataUri = reader.result as string;
-          const aiResponse = await prescribeAiRecommendations({
-            prescriptionImageDataUri: dataUri,
-            storeInventory: products.map(p => ({ id: p.id, name: p.name, price: p.price }))
-          });
-          setSuggestedProducts(aiResponse.suggestedProducts);
-          setUploadProgress(100);
-          setIsSuccess(true);
-          toast({ title: "Success!", description: "Order placed and prescription analyzed." });
-          setIsUploading(false);
-        } catch (err) {
-          setUploadProgress(100);
-          setIsSuccess(true);
-          setIsUploading(false);
-        }
-      };
-      reader.readAsDataURL(file);
+      setUploadProgress(100);
+      setIsSuccess(true);
+      toast({ title: "Success!", description: "Prescription uploaded successfully." });
+      setIsUploading(false);
 
     } catch (error: any) {
       console.error(error);
@@ -128,31 +101,37 @@ export default function PrescriptionPage() {
 
   if (isSuccess) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center max-w-2xl">
-        <div className="bg-white p-12 rounded-3xl shadow-xl border border-primary/10 flex flex-col items-center gap-6">
-          <div className="h-20 w-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-            <CheckCircle2 className="h-12 w-12" />
+      <div className="container mx-auto px-4 py-20 text-center max-w-2xl animate-in fade-in zoom-in duration-500">
+        <div className="bg-white p-12 rounded-[2.5rem] shadow-2xl border border-primary/5 flex flex-col items-center gap-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-secondary to-primary" />
+          <div className="h-24 w-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center shadow-inner">
+            <CheckCircle2 className="h-14 w-14" />
           </div>
-          <h1 className="text-3xl font-bold font-headline">Order Placed Successfully!</h1>
-          <p className="text-muted-foreground">
-            Thank you, <strong>{formData.name}</strong>. Our pharmacists will review your prescription and process your order shortly. A confirmation message will be sent to <strong>{formData.phone}</strong>.
-          </p>
-          {suggestedProducts.length > 0 && (
-            <div className="w-full pt-8 space-y-4">
-              <p className="text-sm font-bold text-secondary flex items-center justify-center gap-2">
-                <Sparkles className="h-4 w-4" /> AI Identified these medicines in our store:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {suggestedProducts.map(s => {
-                  const p = products.find(prod => prod.id === s.id);
-                  return p ? <ProductCard key={p.id} product={p} /> : null;
-                })}
-              </div>
-            </div>
-          )}
-          <div className="flex gap-4 pt-6">
-            <Button onClick={() => window.location.reload()}>Upload Another</Button>
-            <Button variant="outline" onClick={() => window.location.href = '/'}>Back to Home</Button>
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold font-headline text-slate-900">Upload Successful!</h1>
+            <p className="text-lg text-slate-500 max-w-md mx-auto">
+              Thank you, <span className="font-bold text-primary">{formData.name}</span>. Your prescription has been securely stored and our team will review it shortly.
+            </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full pt-4">
+            <Button 
+              className="flex-1 h-14 text-lg font-bold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 transition-all border-none" 
+              onClick={() => {
+                setIsSuccess(false);
+                setFile(null);
+                setPreview(null);
+                setFormData({ name: '', phone: '' });
+              }}
+            >
+              Upload Another
+            </Button>
+            <Button 
+              className="flex-1 h-14 text-lg font-bold rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all" 
+              onClick={() => window.location.href = '/'}
+            >
+              Back to Home
+            </Button>
           </div>
         </div>
       </div>
@@ -160,69 +139,54 @@ export default function PrescriptionPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
-      <div className="text-center mb-12 space-y-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-primary font-headline tracking-tight">
-          Prescription Upload
+    <div className="container mx-auto px-4 py-16 max-w-6xl min-h-[80vh] flex flex-col justify-center">
+      <div className="text-center mb-16 space-y-6">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full text-primary font-bold text-sm uppercase tracking-wider mb-2">
+          <ShieldCheck className="h-4 w-4" /> Secure Medical Upload
+        </div>
+        <h1 className="text-5xl md:text-6xl font-black text-slate-900 font-headline tracking-tight leading-tight">
+          Upload Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Prescription</span>
         </h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-          Fast, secure, and reliable. Upload your prescription to order medicines from the comfort of your home.
+        <p className="text-slate-500 max-w-2xl mx-auto text-xl font-medium">
+          Simply upload your prescription and our certified pharmacists will take care of the rest.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-7 space-y-8">
-          <Card className="shadow-2xl border-primary/5 overflow-hidden rounded-3xl">
-            <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-bold">Patient's Full Name</Label>
-                    <div className="relative">
-                      <Input 
-                        id="name" 
-                        placeholder="John Doe" 
-                        value={formData.name} 
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        required 
-                        className="h-12"
-                      />
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="lg:col-span-7">
+          <Card className="shadow-[0_20px_50px_rgba(0,0,0,0.05)] border-none overflow-hidden rounded-[2.5rem] bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-10 md:p-12">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label htmlFor="name" className="text-sm font-black uppercase tracking-widest text-slate-400">Full Name</Label>
+                    <Input 
+                      id="name" 
+                      placeholder="e.g. John Doe" 
+                      value={formData.name} 
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      required 
+                      className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all text-lg font-medium px-6"
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-bold">Mobile Number</Label>
-                    <div className="relative">
-                      <Input 
-                        id="phone" 
-                        type="tel" 
-                        placeholder="+91 98765-43210" 
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        required 
-                        className="h-12"
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="phone" className="text-sm font-black uppercase tracking-widest text-slate-400">Phone Number</Label>
+                    <Input 
+                      id="phone" 
+                      type="tel" 
+                      placeholder="e.g. +91 98765 43210" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      required 
+                      className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all text-lg font-medium px-6"
+                    />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-sm font-bold flex items-center gap-2">
-                    <MapPin className="h-4 w-4" /> Delivery Address
-                  </Label>
-                  <Textarea 
-                    id="address" 
-                    placeholder="Enter full delivery address with landmark" 
-                    value={formData.address} 
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    required 
-                    className="min-h-[100px] resize-none"
-                  />
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-sm font-bold">Upload Prescription (image or PDF)</Label>
+                  <Label className="text-sm font-black uppercase tracking-widest text-slate-400">Prescription File</Label>
                   <div 
-                    className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer overflow-hidden ${file ? 'border-secondary bg-secondary/5' : 'border-muted-foreground/20 hover:border-primary hover:bg-primary/5'}`}
+                    className={`relative group border-3 border-dashed rounded-[2rem] p-12 text-center transition-all cursor-pointer overflow-hidden ${file ? 'border-secondary bg-secondary/[0.02]' : 'border-slate-200 hover:border-primary hover:bg-primary/[0.02]'}`}
                     onClick={() => document.getElementById('file-upload')?.click()}
                   >
                     <input 
@@ -234,82 +198,72 @@ export default function PrescriptionPage() {
                     />
                     
                     {preview ? (
-                      <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+                      <div className="space-y-6 animate-in fade-in zoom-in duration-300">
                         {file?.type.startsWith('image/') ? (
-                          <div className="relative h-48 w-48 mx-auto rounded-xl shadow-lg border bg-white overflow-hidden">
+                          <div className="relative h-64 w-64 mx-auto rounded-3xl shadow-2xl border-4 border-white overflow-hidden ring-1 ring-slate-100">
                             <Image src={preview} alt="Preview" fill className="object-cover" />
                           </div>
                         ) : (
-                          <div className="h-48 w-48 mx-auto bg-muted rounded-xl flex flex-col items-center justify-center gap-2">
-                            <FileText className="h-16 w-16 text-primary/40" />
-                            <span className="text-xs font-bold text-muted-foreground">PDF Document</span>
+                          <div className="h-64 w-64 mx-auto bg-slate-50 rounded-3xl flex flex-col items-center justify-center gap-4 border border-slate-100 shadow-inner">
+                            <FileText className="h-20 w-20 text-primary/40" />
+                            <span className="text-sm font-bold text-slate-400">PDF DOCUMENT</span>
                           </div>
                         )}
-                        <div className="flex flex-col items-center gap-1">
-                          <p className="font-bold text-sm text-primary">{file?.name}</p>
-                          <p className="text-xs text-muted-foreground">{(file!.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <div className="space-y-1">
+                          <p className="font-bold text-xl text-slate-900">{file?.name}</p>
+                          <p className="text-sm font-medium text-slate-400 uppercase">{(file!.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                         <Button 
-                          variant="destructive" 
-                          size="sm" 
+                          variant="outline" 
+                          size="lg" 
                           type="button" 
                           onClick={handleRemoveFile}
-                          className="h-9 px-4"
+                          className="rounded-xl border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-100 hover:bg-red-50 transition-all font-bold px-8"
                         >
-                          <X className="h-4 w-4 mr-1.5" /> Remove & Change
+                          <X className="h-5 w-5 mr-2" /> Change File
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                        <div className="p-4 bg-muted rounded-full">
-                          <Upload className="h-8 w-8 text-primary" />
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        <div className="p-6 bg-slate-50 rounded-[2rem] text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-sm">
+                          <Upload className="h-10 w-10" />
                         </div>
-                        <div className="space-y-1">
-                          <p className="font-bold text-primary">Capture or select file</p>
-                          <p className="text-xs">Supports Camera, Gallery, and PDF (Max 5MB)</p>
+                        <div className="space-y-2">
+                          <p className="text-2xl font-bold text-slate-900">Click to upload or drag & drop</p>
+                          <p className="text-slate-400 font-medium">Capture from camera or select JPG, PNG, PDF (Max 5MB)</p>
                         </div>
-                        <div className="flex gap-2 pt-2">
-                          <span className="text-[10px] bg-accent px-2 py-1 rounded-full font-bold uppercase tracking-tight">JPG</span>
-                          <span className="text-[10px] bg-accent px-2 py-1 rounded-full font-bold uppercase tracking-tight">PNG</span>
-                          <span className="text-[10px] bg-accent px-2 py-1 rounded-full font-bold uppercase tracking-tight">PDF</span>
+                        <div className="flex gap-3 pt-2">
+                          {['JPG', 'PNG', 'PDF'].map(ext => (
+                            <span key={ext} className="text-xs font-black bg-slate-100 px-4 py-2 rounded-xl text-slate-500 tracking-tighter">{ext}</span>
+                          ))}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-bold flex items-center gap-2 text-muted-foreground">
-                    <MessageSquare className="h-4 w-4" /> Additional Instructions (Optional)
-                  </Label>
-                  <Input 
-                    id="notes" 
-                    placeholder="e.g. Please bring small currency change..." 
-                    value={formData.notes} 
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    className="h-12"
-                  />
-                </div>
-
                 {isUploading && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span>Sending your order...</span>
-                      <span>{uploadProgress}%</span>
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                    <div className="flex justify-between items-end mb-1">
+                      <span className="text-sm font-black text-primary uppercase tracking-widest">Uploading Prescription...</span>
+                      <span className="text-2xl font-black text-primary">{uploadProgress}%</span>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
+                    <Progress value={uploadProgress} className="h-3 rounded-full bg-slate-100" />
                   </div>
                 )}
 
                 <Button 
-                  className="w-full h-14 text-xl font-bold bg-primary hover:bg-primary/90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20" 
+                  className="w-full h-16 text-xl font-black rounded-2xl bg-primary hover:bg-primary/90 transition-all active:scale-[0.98] shadow-xl shadow-primary/20 group overflow-hidden relative" 
                   disabled={isUploading || !file}
                 >
-                  {isUploading ? (
-                    <><Loader2 className="mr-2 h-6 w-6 animate-spin" /> Finalizing...</>
-                  ) : (
-                    <>Place Prescription Order <ArrowRight className="ml-2 h-6 w-6" /></>
-                  )}
+                  <span className="relative z-10 flex items-center justify-center gap-3">
+                    {isUploading ? (
+                      <><Loader2 className="h-6 w-6 animate-spin" /> SECURING FILE...</>
+                    ) : (
+                      <>UPLOAD PRESCRIPTION <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" /></>
+                    )}
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 </Button>
               </form>
             </CardContent>
@@ -317,32 +271,33 @@ export default function PrescriptionPage() {
         </div>
 
         <div className="lg:col-span-5 space-y-8">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-primary/5 space-y-6">
-            <h3 className="font-bold text-xl flex items-center gap-2 text-primary">
-              <FileText className="h-6 w-6" />
-              Upload Guidelines
+          <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl space-y-10 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
+              <ShieldCheck className="h-48 w-48" />
+            </div>
+            <h3 className="font-black text-3xl font-headline relative z-10">
+              Why Upload Online?
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-8 relative z-10">
               {[
-                { title: "Camera & Gallery", desc: "You can take a photo directly or select one from your gallery.", icon: Camera },
-                { title: "Clear Visibility", desc: "Ensure the patient's name, doctor's sign, and date are readable.", icon: Sparkles },
-                { title: "Secure & Encrypted", desc: "Your medical data is stored securely and never shared.", icon: ShieldCheck },
-                { title: "Format Support", desc: "We accept JPG, PNG images and PDF documents.", icon: FileText }
+                { title: "Privacy First", desc: "Your medical documents are encrypted and stored in secure HIPAA-compliant storage.", icon: ShieldCheck },
+                { title: "Real-time Processing", desc: "Our pharmacists are notified instantly the moment you upload your file.", icon: Sparkles },
+                { title: "Clear Guidelines", desc: "Ensure your prescription shows patient name, date, and doctor's signature.", icon: FileText }
               ].map((item, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="h-10 w-10 shrink-0 bg-accent rounded-xl flex items-center justify-center">
-                    <item.icon className="h-5 w-5 text-secondary" />
+                <div key={i} className="flex gap-6 items-start">
+                  <div className="h-14 w-14 shrink-0 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                    <item.icon className="h-7 w-7 text-secondary" />
                   </div>
-                  <div>
-                    <h4 className="font-bold text-sm">{item.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-xl">{item.title}</h4>
+                    <p className="text-slate-400 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="p-4 bg-secondary/10 rounded-2xl border border-secondary/20">
-              <p className="text-xs text-secondary font-medium leading-relaxed italic">
-                * Our pharmacists will call you to confirm the items and prices before dispatching the order.
+            <div className="p-6 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm relative z-10">
+              <p className="text-sm text-slate-300 font-medium leading-relaxed italic">
+                "Our mission is to provide the fastest medical service while maintaining the highest security standards for your health data."
               </p>
             </div>
           </div>
@@ -351,3 +306,4 @@ export default function PrescriptionPage() {
     </div>
   );
 }
+

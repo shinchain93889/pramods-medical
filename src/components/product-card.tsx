@@ -54,11 +54,19 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         <CardHeader className="p-4 pb-0 space-y-1">
           <CardTitle className="text-base line-clamp-1" title={product.name}>{product.name}</CardTitle>
-          {product.composition && (
-            <p className="text-[11px] font-medium text-primary/80 line-clamp-1" title={product.composition}>
-              {product.composition}
-            </p>
-          )}
+          <div className="flex flex-col gap-0.5">
+            {product.manufacturer && (
+              <p className="text-[10px] text-muted-foreground uppercase tracking-tight line-clamp-1">{product.manufacturer}</p>
+            )}
+            {product.composition && (
+              <p className="text-[11px] font-medium text-primary/80 line-clamp-1" title={product.composition}>
+                {product.composition}
+              </p>
+            )}
+            {product.packSize && (
+              <p className="text-[10px] font-semibold text-secondary-foreground/70">{product.packSize}</p>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground line-clamp-2" title={product.description}>{product.description}</p>
         </CardHeader>
         <CardContent className="p-4 pt-2 flex-grow">
@@ -75,9 +83,16 @@ export function ProductCard({ product }: { product: Product }) {
       <DialogContent className="sm:max-w-[500px] h-[80vh] sm:h-auto overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl text-primary font-headline">{product.name}</DialogTitle>
-          <DialogDescription className="uppercase tracking-wider font-semibold text-xs">
-            {product.category}
-          </DialogDescription>
+          <div className="flex items-center gap-2">
+            <DialogDescription className="uppercase tracking-wider font-semibold text-xs py-1 px-2 bg-muted rounded">
+              {product.category}
+            </DialogDescription>
+            {product.packSize && (
+              <span className="text-[11px] font-bold text-secondary-foreground bg-secondary/20 px-2 py-1 rounded">
+                {product.packSize}
+              </span>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="grid gap-6 py-4">
@@ -90,6 +105,13 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
           
           <div className="space-y-4">
+            {product.manufacturer && (
+              <div className="px-1">
+                <h4 className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">Manufacturer</h4>
+                <p className="text-sm font-semibold text-foreground italic">{product.manufacturer}</p>
+              </div>
+            )}
+
             {product.composition && (
               <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
                 <h4 className="font-bold text-sm text-foreground mb-1">Composition</h4>

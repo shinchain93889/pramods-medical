@@ -7,6 +7,9 @@ export type Product = {
   image: string;
   composition?: string;
   sideEffects?: string;
+  manufacturer?: string;
+  packSize?: string;
+  isDiscontinued?: boolean;
 };
 
 export const categories = [

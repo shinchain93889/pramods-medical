@@ -1,5 +1,5 @@
 
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 import { CartProvider } from '@/hooks/use-cart';
+import { AuthProvider } from '@/hooks/use-auth';
 
 export default function RootLayout({
   children,
@@ -25,15 +26,18 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen bg-background">
-        <CartProvider>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-          <Toaster />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Navbar />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

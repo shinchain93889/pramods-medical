@@ -11,6 +11,9 @@ export interface Product {
   image: string;
   composition?: string;
   sideEffects?: string;
+  manufacturer?: string;
+  packSize?: string;
+  isDiscontinued?: boolean;
 }
 
 let cachedProducts: Product[] | null = null;
@@ -49,24 +52,55 @@ function parseCSVRow(text: string) {
     return result;
 }
 
-function extractCategory(uses: string): string {
-    const lowered = uses.toLowerCase();
-    if (lowered.includes('fever') || lowered.includes('pain')) return 'Fever & Pain';
-    if (lowered.includes('diabetes')) return 'Diabetes';
-    if (lowered.includes('skin') || lowered.includes('acne')) return 'Skin Care';
-    if (lowered.includes('cough') || lowered.includes('cold')) return 'Cough & Cold';
-    if (lowered.includes('bacterial') || lowered.includes('infection')) return 'Antibiotics';
-    if (lowered.includes('heart') || lowered.includes('hypertension') || lowered.includes('cholesterol') || lowered.includes('blood pressure')) return 'Heart & Blood Pressure';
-    if (lowered.includes('vitamin') || lowered.includes('supplement') || lowered.includes('nutrition')) return 'Vitamins & Supplements';
-    if (lowered.includes('allerg') || lowered.includes('asthma')) return 'Allergy & Asthma';
+function extractCategory(name: string, uses: string, packSize: string): string {
+    const loweredUses = uses.toLowerCase();
+    const loweredName = name.toLowerCase();
+    const loweredPack = packSize.toLowerCase();
+
+    // Check for Health Supplements
+    if (loweredUses.includes('vitamin') || loweredUses.includes('supplement') || loweredUses.includes('nutrition') || loweredName.includes('multivitamin')) {
+        return 'Health Supplements';
+    }
+    
+    // Check for First Aid
+    if (loweredUses.includes('first aid') || loweredName.includes('bandage') || loweredName.includes('antiseptic') || loweredName.includes('dettol') || loweredName.includes('savlon') || loweredPack.includes('bandage') || loweredPack.includes('gauze')) {
+        return 'First Aid';
+    }
+
+    // Check for Syrups
+    if (loweredName.includes('syrup') || loweredPack.includes('syrup') || loweredPack.includes('suspension') || loweredPack.includes('liquid') || loweredName.includes('expectorant')) {
+        return 'Syrups';
+    }
+
+    // Check for Tablets
+    if (loweredName.includes('tablet') || loweredPack.includes('tablet') || loweredPack.includes('strip of') || loweredName.includes('capsule') || loweredPack.includes('capsule')) {
+        return 'Tablets';
+    }
+
+    // Check for Eye Care (Must be before Heart/Hypertension check)
+    if (loweredUses.includes('glaucoma') || loweredUses.includes('ocular') || loweredName.includes('eye drop') || loweredPack.includes('eye drop') || loweredUses.includes('ophthalmic')) {
+        return 'Eye Care';
+    }
+
+    // Functional categories
+    if (loweredUses.includes('fever') || loweredUses.includes('pain')) return 'Fever & Pain';
+    if (loweredUses.includes('diabetes')) return 'Diabetes';
+    if (loweredUses.includes('skin') || loweredUses.includes('acne') || loweredName.includes('cream') || loweredName.includes('gel')) return 'Skin Care';
+    if (loweredUses.includes('cough') || loweredUses.includes('cold')) return 'Cough & Cold';
+    if (loweredUses.includes('bacterial') || loweredUses.includes('infection')) return 'Antibiotics';
+    if (loweredUses.includes('heart') || loweredUses.includes('hypertension') || loweredUses.includes('cholesterol') || loweredUses.includes('blood pressure')) return 'Heart & Blood Pressure';
+    if (loweredUses.includes('allerg') || loweredUses.includes('asthma')) return 'Allergy & Asthma';
+    
     return 'General Care';
 }
 
 function loadData() {
     if (cachedProducts) return;
     
-    const filePath = path.join(process.cwd(), 'data', 'Medicine_Details.csv');
+    // Using the new merged dataset
+    const filePath = path.join(process.cwd(), 'data', 'Merged_Medicine_Dataset.csv');
     if (!fs.existsSync(filePath)) {
+        console.warn("Dataset not found at:", filePath);
         cachedProducts = [];
         return;
     }
@@ -77,35 +111,40 @@ function loadData() {
         const products: Product[] = [];
         const catSet = new Set<string>();
         
-        // Assuming CSV header: Medicine Name, Composition, Uses, Side_effects, Image URL, Manufacturer, Reviews...
+        // CSV header: Medicine Name,Composition,Uses,Side_effects,Image URL,Manufacturer,Excellent Review %,Average Review %,Poor Review %,price(₹),Is_discontinued,manufacturer_name,pack_size_label,short_composition1,short_composition2
         for(let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if(!line) continue;
             
             const cols = parseCSVRow(line);
-            if (cols.length < 6) continue;
+            // new dataset should have 15 columns
+            if (cols.length < 15) continue;
             
-            const name = cols[0];
-            const composition = cols[1];
-            const uses = cols[2];
-            const sideEffects = cols[3];
-            const image = cols[4];
+            const name = cols[0].replace(/^"|"$/g, '').trim();
+            const composition = cols[1].replace(/^"|"$/g, '').trim();
+            const uses = cols[2].replace(/^"|"$/g, '').trim();
+            const sideEffects = cols[3].replace(/^"|"$/g, '').trim();
+            const image = cols[4].replace(/^"|"$/g, '').trim();
+            const manufacturer = cols[5].replace(/^"|"$/g, '').trim();
+            const priceVal = parseFloat(cols[9]) || 0;
+            const discontinued = cols[10].toLowerCase() === 'true';
+            const packSize = cols[12].replace(/^"|"$/g, '').trim();
             
-            const cat = extractCategory(uses);
+            const cat = extractCategory(name, uses, packSize);
             catSet.add(cat);
-            
-            // Deterministic price fallback mock since CSV lacks Price column
-            const priceIndicator = ((name.length * 23) % 850) + 20;
             
             products.push({
                 id: `med_${i}`,
-                name: name.replace(/^"|"$/g, ''),
-                price: priceIndicator,
+                name: name,
+                price: priceVal,
                 category: cat,
-                description: uses.replace(/^"|"$/g, ''),
-                image: image.replace(/^"|"$/g, '') || `https://picsum.photos/seed/${i}/400/400`,
-                composition: composition.replace(/^"|"$/g, ''),
-                sideEffects: sideEffects.replace(/^"|"$/g, '')
+                description: uses,
+                image: image || `https://picsum.photos/seed/${i}/400/400`,
+                composition: composition,
+                sideEffects: sideEffects,
+                manufacturer: manufacturer,
+                packSize: packSize,
+                isDiscontinued: discontinued
             });
         }
         
