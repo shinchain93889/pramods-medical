@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Heart, Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -62,8 +63,10 @@ export default function LoginPage() {
       console.error("Authentication error details:", error);
       toast({
         title: isSignUp ? "Sign Up Error" : "Login Error",
-        description: error.message === 'Failed to fetch' 
-          ? "Network error: Unable to connect to Supabase. Please check your internet connection or if the database is accessible."
+        description: error.message === 'Failed to fetch'
+          ? "Network error: Unable to connect to Supabase. Please check your internet connection."
+          : error.message === 'Invalid login credentials'
+          ? "Incorrect email or password. If you just signed up, please confirm your email first."
           : error.message || "An unexpected error occurred.",
         variant: "destructive"
       });
@@ -116,13 +119,24 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="login-password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
           </div>

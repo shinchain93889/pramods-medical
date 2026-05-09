@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveProfile } from './actions';
 import { User, Mail, Phone, MapPin, Loader2, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -17,6 +16,7 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [mobileNo, setMobileNo] = useState('');
   const [address, setAddress] = useState('');
+  const [userId, setUserId] = useState('');
 
   const router = useRouter();
 
@@ -34,6 +34,7 @@ export default function ProfilePage() {
 
       const userEmail = session.user.email || '';
       setEmail(userEmail);
+      setUserId(session.user.id);
 
       try {
         // Fetch existing profile if any
@@ -63,20 +64,49 @@ export default function ProfilePage() {
     setLoading(true);
     setMessage(null);
 
-    const formData = new FormData(event.currentTarget);
-    formData.append('email', email); // ensure email is submitted
-
-    const result = await saveProfile(formData);
-
-    if (result.success) {
-      setMessage({ type: 'success', text: result.message });
-      toast({ title: 'Success', description: result.message });
-    } else {
-      setMessage({ type: 'error', text: result.message });
-      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+    if (!name || !email || !mobileNo) {
+      const errorMsg = 'Name, email, and mobile number are required.';
+      setMessage({ type: 'error', text: errorMsg });
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    try {
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      let result;
+      if (existingProfile) {
+        // Update existing record
+        result = await supabase
+          .from('profiles')
+          .update({ name, mobile_no: mobileNo, address })
+          .eq('email', email);
+      } else {
+        // Insert new record (providing the required id from auth)
+        result = await supabase
+          .from('profiles')
+          .insert([{ id: userId, email, name, mobile_no: mobileNo, address }]);
+      }
+
+      if (result.error) throw result.error;
+
+      const successMsg = 'Profile saved successfully!';
+      setMessage({ type: 'success', text: successMsg });
+      toast({ title: 'Success', description: successMsg });
+    } catch (err: any) {
+      console.error('Error saving profile:', err);
+      const errorMsg = err.message || 'An unexpected error occurred.';
+      setMessage({ type: 'error', text: errorMsg });
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleLogout() {
